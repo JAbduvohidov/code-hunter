@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
@@ -37,13 +38,23 @@ namespace code_hunter.Controllers
                 return BadRequest(AuthErrorResult($"email '{user.Email}' can not be used"));
 
             var newUser = new User {Email = userModel.Email, UserName = userModel.Username, Removed = false};
-            var isCreated = await _userManager.CreateAsync(newUser, userModel.Password);
-            if (!isCreated.Succeeded)
+            var result = await _userManager.CreateAsync(newUser, userModel.Password);
+            if (!result.Succeeded)
                 return BadRequest(new AuthResultDto
                 {
-                    Errors = isCreated.Errors.Select(x => x.Description).ToList(),
+                    Errors = result.Errors.Select(x => x.Description).ToList(),
                     Success = false
                 });
+
+            result = await _userManager.AddToRoleAsync(newUser, "User");
+            if (!result.Succeeded)
+                return BadRequest(new AuthResultDto
+                {
+                    Errors = result.Errors.Select(x => x.Description).ToList(),
+                    Success = false
+                });
+
+            newUser.Roles = new List<string> {"User"};
 
             var jwtToken = GenerateJwtToken(newUser);
 
@@ -73,6 +84,11 @@ namespace code_hunter.Controllers
             if (!isCorrect)
                 return BadRequest(AuthErrorResult("invalid login request"));
 
+
+            var roles = await _userManager.GetRolesAsync(user);
+
+            user.Roles = roles.ToList();
+
             var jwtToken = GenerateJwtToken(user);
 
             return Ok(new AuthResultDto
@@ -94,23 +110,24 @@ namespace code_hunter.Controllers
             var jwtTokenHandler = new JwtSecurityTokenHandler();
 
             var key = Encoding.ASCII.GetBytes(_jwtConfig.Secret);
+            var roleClaims = new List<Claim>();
 
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new Claim[]
+            user.Roles.ForEach(role => roleClaims.Add(new Claim("roles", role)));
+            var claims = new Claim[]
                 {
-                    new("id", user.Id),
+                    new("uid", user.Id),
                     new(JwtRegisteredClaimNames.Email, user.Email),
                     new(JwtRegisteredClaimNames.Sub, user.Email),
-                    new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-                }),
-                Expires = DateTime.UtcNow.AddHours(10),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key),
-                    SecurityAlgorithms.HmacSha256Signature)
-            };
+                    new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                }
+                .Union(roleClaims);
 
-            var token = jwtTokenHandler.CreateToken(tokenDescriptor);
-            var jwtToken = jwtTokenHandler.WriteToken(token);
+            var tokenDescriptor = new JwtSecurityToken(claims: claims,
+                expires: DateTime.UtcNow.AddHours(10),
+                signingCredentials: new SigningCredentials(new SymmetricSecurityKey(key),
+                    SecurityAlgorithms.HmacSha256Signature));
+
+            var jwtToken = jwtTokenHandler.WriteToken(tokenDescriptor);
 
             return jwtToken;
         }
