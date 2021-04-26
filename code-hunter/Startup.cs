@@ -32,6 +32,12 @@ namespace code_hunter
                 options.UseNpgsql(
                     Configuration.GetConnectionString("Default")
                 ));
+            
+            services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAllOrigins",
+                    b => { b.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod(); });
+            });
 
             services.AddAuthentication(options =>
                 {
@@ -89,6 +95,8 @@ namespace code_hunter
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "code_hunter v1"));
             }
+            
+            app.UseCors("AllowAllOrigins");
 
             app.UseHttpsRedirection();
 
