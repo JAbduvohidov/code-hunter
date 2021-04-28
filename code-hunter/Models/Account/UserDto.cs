@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace code_hunter.Models.Account
@@ -12,5 +13,9 @@ namespace code_hunter.Models.Account
         [Required] public string Role { get; set; }
 
         public bool Removed { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+
+        public DateTime UpdatedAt { get; set; }
     }
 }

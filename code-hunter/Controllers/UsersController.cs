@@ -27,14 +27,18 @@ namespace code_hunter.Controllers
 
         [HttpGet]
         [Route("")]
-        public async Task<IActionResult> Get()
+        public async Task<IActionResult> Get([FromQuery] string email, [FromQuery] int limit, [FromQuery] int offset)
         {
-            var users = new List<UserDto>();
-            await _userManager.Users.ForEachAsync(user =>
-                users.Add(new UserDto
-                {
-                    Id = user.Id, Email = user.Email, Removed = user.Removed, Username = user.UserName
-                }));
+            email = email == null ? string.Empty : email.Trim();
+
+            var users = await _userManager.Users.Where(user => email.Equals(string.Empty) || user.Email.Contains(email))
+                .OrderByDescending(user => user.CreatedAt).Skip(offset).Take(limit)
+                .Select(user =>
+                    new UserDto
+                    {
+                        Id = user.Id, Email = user.Email, Removed = user.Removed, Username = user.UserName,
+                        CreatedAt = user.CreatedAt, UpdatedAt = user.UpdatedAt
+                    }).ToListAsync();
 
             users.ForEach(user =>
                 user.Role = _userManager.GetRolesAsync(new User {Id = user.Id}).Result.First());

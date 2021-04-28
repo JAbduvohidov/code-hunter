@@ -11,7 +11,7 @@ using code_hunter.Context;
 namespace code_hunter.Migrations
 {
     [DbContext(typeof(CodeHunterContext))]
-    [Migration("20210425110830_initial")]
+    [Migration("20210428055545_initial")]
     partial class initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -164,6 +164,9 @@ namespace code_hunter.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("text");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -205,6 +208,9 @@ namespace code_hunter.Migrations
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)

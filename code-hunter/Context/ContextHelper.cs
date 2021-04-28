@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using System;
+using Microsoft.AspNetCore.Identity;
 using System.Linq;
 using System.Threading.Tasks;
 using code_hunter.Models.Account;
@@ -39,7 +40,9 @@ namespace code_hunter.Context
                 var adminUser = new User
                 {
                     UserName = "admin",
-                    Email = "admin@codehunter.com"
+                    Email = "admin@codehunter.com",
+                    Removed = false,
+                    CreatedAt = DateTime.Now
                 };
                 var result = await userManager.CreateAsync(adminUser, "secret");
 

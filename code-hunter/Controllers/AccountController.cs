@@ -37,7 +37,8 @@ namespace code_hunter.Controllers
             if (user != null)
                 return BadRequest(AuthErrorResult($"email '{user.Email}' can not be used"));
 
-            var newUser = new User {Email = userModel.Email, UserName = userModel.Username, Removed = false};
+            var newUser = new User
+                {Email = userModel.Email, UserName = userModel.Username, Removed = false, CreatedAt = DateTime.Now};
             var result = await _userManager.CreateAsync(newUser, userModel.Password);
             if (!result.Succeeded)
                 return BadRequest(new AuthResultDto
@@ -61,6 +62,7 @@ namespace code_hunter.Controllers
             return Ok(new AuthResultDto
             {
                 Success = true,
+                Role = newUser.Roles.First(),
                 Token = jwtToken
             });
         }
@@ -94,6 +96,7 @@ namespace code_hunter.Controllers
             return Ok(new AuthResultDto
             {
                 Success = true,
+                Role = user.Roles.First(),
                 Token = jwtToken
             });
         }
