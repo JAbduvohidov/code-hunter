@@ -62,8 +62,8 @@ namespace code_hunter.Controllers
             result = await _userManager.AddToRoleAsync(user, userModel.Role);
             if (!result.Succeeded) return InternalServerError(result);
 
-            user.Email = userModel.Email;
             user.UserName = userModel.Username;
+            user.UpdatedAt = DateTime.Now;
             result = await _userManager.UpdateAsync(user);
             if (!result.Succeeded) return InternalServerError(result);
 
@@ -79,6 +79,7 @@ namespace code_hunter.Controllers
                 return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"user not found"}});
 
             user.Removed = true;
+            user.UpdatedAt = DateTime.Now;
 
             var result = await _userManager.UpdateAsync(user);
             if (!result.Succeeded) return InternalServerError(result);
