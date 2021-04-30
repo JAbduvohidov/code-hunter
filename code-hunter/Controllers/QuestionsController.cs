@@ -36,9 +36,12 @@ namespace code_hunter.Controllers
             var questions = await _context.Questions.Where(q =>
                     q.Removed == false && (questionTitle.Equals(string.Empty) || q.Title.Contains(questionTitle)))
                 .ToListAsync();
-            questions.ForEach(async q =>
-                q.AnswersCount = await _context.Answers.CountAsync(a => a.QuestionId.Equals(q.Id)));
-            
+            questions.ForEach(q =>
+            {
+                q.AnswersCount = _context.Answers.Count(a => a.QuestionId.Equals(q.Id));
+                q.Votes = _context.Votes.Count(a => a.QuestionId.Equals(q.Id));
+            });
+
             return Ok(questions);
         }
 
