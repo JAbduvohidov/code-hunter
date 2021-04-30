@@ -134,5 +134,29 @@ namespace code_hunter.Controllers
             await _context.SaveChangesAsync();
             return Ok();
         }
+
+
+        [HttpPut]
+        [Route("{id}/solved")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> ToggleSolved([FromRoute] Guid id)
+        {
+            var question = await _context.Questions.Where(q => q.Id.Equals(id) && q.Removed == false)
+                .FirstOrDefaultAsync();
+            if (question == null)
+                return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"question not found"}});
+
+            var userId = HttpContext.User.Claims.First(c => c.Type.Equals("uid")).Value;
+
+            var role = (await _userManager.GetRolesAsync(new User {Id = userId})).First();
+            if (!question.UserId.Equals(new Guid(userId)) || !role.Equals("Admin"))
+                return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"can't delete this question"}});
+
+            question.Solved = !question.Solved;
+            question.UpdatedAt = DateTime.Now;
+            _context.Questions.Update(question);
+            await _context.SaveChangesAsync();
+            return Ok();
+        }
     }
 }
