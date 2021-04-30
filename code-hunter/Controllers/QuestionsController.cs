@@ -29,9 +29,13 @@ namespace code_hunter.Controllers
 
         [HttpGet]
         [Route("")]
-        public async Task<IActionResult> Get()
+        public async Task<IActionResult> Get([FromQuery] string questionTitle)
         {
-            var questions = await _context.Questions.Where(q => q.Removed == false).ToListAsync();
+            questionTitle = questionTitle == null ? string.Empty : questionTitle.Trim();
+            
+            var questions = await _context.Questions.Where(q =>
+                    q.Removed == false && (questionTitle.Equals(string.Empty) || q.Title.Contains(questionTitle)))
+                .ToListAsync();
             return Ok(questions);
         }
 
