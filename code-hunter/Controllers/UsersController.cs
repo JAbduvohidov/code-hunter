@@ -15,7 +15,7 @@ namespace code_hunter.Controllers
 {
     [Route("api/users")]
     [ApiController]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class UsersController : ControllerBase
     {
         private readonly UserManager<User> _userManager;
@@ -23,6 +23,24 @@ namespace code_hunter.Controllers
         public UsersController(UserManager<User> userManager)
         {
             _userManager = userManager;
+        }
+
+        [HttpGet]
+        [Route("profile")]
+        public async Task<IActionResult> Profile()
+        {
+            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Removed == false);
+
+            var userDto = new UserDto
+            {
+                Id = user.Id,
+                Email = user.Email,
+                Username = user.UserName,
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = user.UpdatedAt,
+            };
+
+            return Ok(userDto);
         }
 
         [HttpGet]
@@ -53,6 +71,12 @@ namespace code_hunter.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest();
+
+            var userId = HttpContext.User.Claims.First(c => c.Type.Equals("uid")).Value;
+            var role = (await _userManager.GetRolesAsync(new User {Id = userId})).First();
+            if (!role.Equals("Admin") || userId.Equals(id.ToString()))
+                return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"can't edit this user"}});
+
             var user = _userManager.Users.FirstOrDefault(u => u.Id.Equals(id.ToString()) && u.Removed == false);
             if (user == null)
                 return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"user not found"}});
@@ -75,6 +99,11 @@ namespace code_hunter.Controllers
         [Route("{id}")]
         public async Task<IActionResult> Delete([FromRoute] Guid id)
         {
+            var userId = HttpContext.User.Claims.First(c => c.Type.Equals("uid")).Value;
+            var role = (await _userManager.GetRolesAsync(new User {Id = userId})).First();
+            if (!role.Equals("Admin") || userId.Equals(id.ToString()))
+                return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"can't edit this user"}});
+
             var user = _userManager.Users.FirstOrDefault(u => u.Id.Equals(id.ToString()) && u.Removed == false);
             if (user == null)
                 return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"user not found"}});
