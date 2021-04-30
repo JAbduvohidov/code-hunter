@@ -40,6 +40,8 @@ namespace code_hunter.Controllers
             {
                 q.AnswersCount = _context.Answers.Count(a => a.QuestionId.Equals(q.Id));
                 q.Votes = _context.Votes.Count(a => a.QuestionId.Equals(q.Id));
+                q.Useful = _context.UsefulQuestions.Count(u => u.QuestionId.Equals(q.Id) && u.IsUseful);
+                q.NotUseful = _context.UsefulQuestions.Count(u => u.QuestionId.Equals(q.Id) && !u.IsUseful);
             });
 
             return Ok(questions);

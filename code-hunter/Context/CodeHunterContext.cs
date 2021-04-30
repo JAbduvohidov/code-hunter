@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using code_hunter.Models.Account;
 using code_hunter.Models.Answer;
 using code_hunter.Models.Question;
+using code_hunter.Models.Useful;
 using code_hunter.Models.Vote;
 
 namespace code_hunter.Context
@@ -15,7 +16,8 @@ namespace code_hunter.Context
 
         public DbSet<Question> Questions { get; set; }
         public DbSet<Answer> Answers { get; set; }
-
         public DbSet<Vote> Votes { get; set; }
+        public DbSet<UsefulQuestion> UsefulQuestions { get; set; }
+        public DbSet<UsefulAnswer> UsefulAnswers { get; set; }
     }
 }
