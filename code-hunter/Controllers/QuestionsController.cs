@@ -38,7 +38,7 @@ namespace code_hunter.Controllers
                 .ToListAsync();
             questions.ForEach(q =>
             {
-                q.AnswersCount = _context.Answers.Count(a => a.QuestionId.Equals(q.Id));
+                q.AnswersCount = _context.Answers.Count(a => a.QuestionId.Equals(q.Id) && a.Removed == false);
                 q.Votes = _context.Votes.Count(a => a.QuestionId.Equals(q.Id));
                 q.Useful = _context.UsefulQuestions.Count(u => u.QuestionId.Equals(q.Id) && u.IsUseful);
                 q.NotUseful = _context.UsefulQuestions.Count(u => u.QuestionId.Equals(q.Id) && !u.IsUseful);
@@ -58,6 +58,12 @@ namespace code_hunter.Controllers
 
             var answers = await _context.Answers.Where(a => a.QuestionId.Equals(question.Id) && a.Removed == false)
                 .ToListAsync();
+
+            answers.ForEach(a =>
+            {
+                a.Useful = _context.UsefulAnswers.Count(u => u.AnswerId.Equals(a.Id) && u.IsUseful);
+                a.NotUseful = _context.UsefulAnswers.Count(u => u.AnswerId.Equals(a.Id) && !u.IsUseful);
+            });
             question.Answers = answers;
             return Ok(question);
         }
