@@ -115,9 +115,9 @@ namespace code_hunter.Controllers
         [HttpDelete]
         [Route("{id}")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public async Task<IActionResult> Delete([FromRoute] Guid questionId, [FromRoute] Guid id)
+        public async Task<IActionResult> Delete([FromRoute] Guid id)
         {
-            var question = await _context.Questions.Where(q => q.Id.Equals(questionId) && q.Removed == false)
+            var question = await _context.Questions.Where(q => q.Id.Equals(id) && q.Removed == false)
                 .FirstOrDefaultAsync();
             if (question == null)
                 return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"question not found"}});
