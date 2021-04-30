@@ -1,10 +1,15 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using code_hunter.Context;
+using code_hunter.Models;
+using code_hunter.Models.Account;
+using code_hunter.Models.Question;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace code_hunter.Controllers
@@ -14,42 +19,65 @@ namespace code_hunter.Controllers
     public class QuestionsController : ControllerBase
     {
         private readonly CodeHunterContext _context;
+        private readonly UserManager<User> _userManager;
 
-        public QuestionsController(CodeHunterContext context)
+        public QuestionsController(CodeHunterContext context, UserManager<User> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         [HttpGet]
         [Route("")]
         public async Task<IActionResult> Get()
         {
-            var questions = await _context.Questions.Select(q => q).ToListAsync();
+            var questions = await _context.Questions.Where(q => q.Removed == false).ToListAsync();
             return Ok(questions);
         }
 
         [HttpGet]
         [Route("{id}")]
-        public async Task<IActionResult> GetById([FromQuery] Guid id)
+        public async Task<IActionResult> GetById([FromRoute] Guid id)
         {
-            var question = await _context.Questions.Where(q => q.Id.Equals(id)).FirstOrDefaultAsync();
+            var question = await _context.Questions.Where(q => q.Id.Equals(id) && q.Removed == false)
+                .FirstOrDefaultAsync();
+            if (question == null)
+                return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"question not found"}});
+
             var answers = await _context.Answers.Where(a => a.QuestionId.Equals(question.Id)).ToListAsync();
             question.Answers = answers;
-            return Ok();
+            return Ok(question);
         }
 
         [HttpPost]
         [Route("")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public async Task<IActionResult> Add()
+        public async Task<IActionResult> Add([FromBody] QuestionDto questionModel)
         {
-            //TODO: create QuestionDto model with validation properties
-            //TODO: get Question details from [FromBody] argument
-            //TODO: use this userId to add new question to database
-            var userId = HttpContext.User.Claims.First(c => c.Type.Equals("uid")).Value;
+            if (!ModelState.IsValid)
+                return BadRequest();
 
-            //TODO: build Question model and fill its data with info from QuestionDto
-            //TODO: save new Question to database
+            var userId = HttpContext.User.Claims.First(c => c.Type.Equals("uid")).Value;
+            var username = (await _userManager.Users.Where(u => u.Id.Equals(userId)).FirstAsync()).UserName;
+
+            var question = new Question
+            {
+                Title = questionModel.Title,
+                Description = questionModel.Description,
+                Removed = false,
+                Solved = false,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
+                Votes = 0,
+                Useful = 0,
+                NotUseful = 0,
+                AnswersCount = 0,
+                UserId = new Guid(userId),
+                Username = username
+            };
+
+            await _context.Questions.AddAsync(question);
+            await _context.SaveChangesAsync();
 
             return Ok();
         }
@@ -57,26 +85,52 @@ namespace code_hunter.Controllers
         [HttpPut]
         [Route("{id}")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public async Task<IActionResult> Edit()
+        public async Task<IActionResult> Edit([FromRoute] Guid id, [FromBody] QuestionDto questionModel)
         {
-            //TODO: get QuestionDto from [FromBody] argument
-            //TODO: get userId from HttpContext.User.Claims
-            //TODO: fill updated question fields
-            //TODO: update UpdatedAt field with DateTime.Now
-            //TODO: save updated info
+            if (!ModelState.IsValid)
+                return BadRequest();
+
+            var question = await _context.Questions.Where(q => q.Id.Equals(id) && q.Removed == false)
+                .FirstOrDefaultAsync();
+            if (question == null)
+                return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"question not found"}});
+
+            var userId = HttpContext.User.Claims.First(c => c.Type.Equals("uid")).Value;
+
+            var role = (await _userManager.GetRolesAsync(new User {Id = userId})).First();
+            if (!question.UserId.Equals(new Guid(userId)) || !role.Equals("Admin"))
+                return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"can't edit this question"}});
+
+            question.Title = questionModel.Title;
+            question.Description = questionModel.Description;
+            question.UpdatedAt = DateTime.Now;
+
+            _context.Questions.Update(question);
+            await _context.SaveChangesAsync();
+
             return Ok();
         }
 
         [HttpDelete]
         [Route("{id}")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-        public async Task<IActionResult> Delete()
+        public async Task<IActionResult> Delete([FromRoute] Guid id)
         {
-            //TODO: get questionId from [FromQuery] argument
-            //TODO: get question from database
-            //TODO: updated Removed field to false
-            //TODO: updated UpdatedAt field to DateTime.Now
-            //TODO: save updated info to database
+            var question = await _context.Questions.Where(q => q.Id.Equals(id) && q.Removed == false)
+                .FirstOrDefaultAsync();
+            if (question == null)
+                return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"question not found"}});
+
+            var userId = HttpContext.User.Claims.First(c => c.Type.Equals("uid")).Value;
+
+            var role = (await _userManager.GetRolesAsync(new User {Id = userId})).First();
+            if (!question.UserId.Equals(new Guid(userId)) || !role.Equals("Admin"))
+                return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"can't edit this question"}});
+
+            question.Removed = true;
+            question.UpdatedAt = DateTime.Now;
+            _context.Questions.Update(question);
+            await _context.SaveChangesAsync();
             return Ok();
         }
     }
