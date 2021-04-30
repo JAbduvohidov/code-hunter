@@ -55,6 +55,8 @@ namespace code_hunter.Controllers
                     Success = false
                 });
 
+            var userId = await _userManager.GetUserIdAsync(newUser);
+
             newUser.Roles = new List<string> {"User"};
 
             var jwtToken = GenerateJwtToken(newUser);
@@ -63,6 +65,7 @@ namespace code_hunter.Controllers
             {
                 Success = true,
                 Role = newUser.Roles.First(),
+                UserId = new Guid(userId),
                 Token = jwtToken
             });
         }
@@ -97,6 +100,7 @@ namespace code_hunter.Controllers
             {
                 Success = true,
                 Role = user.Roles.First(),
+                UserId = new Guid(user.Id),
                 Token = jwtToken
             });
         }

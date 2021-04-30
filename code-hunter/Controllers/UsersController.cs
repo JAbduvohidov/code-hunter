@@ -31,7 +31,8 @@ namespace code_hunter.Controllers
         {
             email = email == null ? string.Empty : email.Trim();
 
-            var users = await _userManager.Users.Where(user => email.Equals(string.Empty) || user.Email.Contains(email))
+            var users = await _userManager.Users.Where(user =>
+                    (email.Equals(string.Empty) || user.Email.Contains(email)) && user.Removed == false)
                 .OrderByDescending(user => user.CreatedAt).Skip(offset).Take(limit)
                 .Select(user =>
                     new UserDto
@@ -52,7 +53,7 @@ namespace code_hunter.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest();
-            var user = _userManager.Users.FirstOrDefault(p => p.Id.Equals(id.ToString()));
+            var user = _userManager.Users.FirstOrDefault(u => u.Id.Equals(id.ToString()) && u.Removed == false);
             if (user == null)
                 return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"user not found"}});
 
@@ -74,7 +75,7 @@ namespace code_hunter.Controllers
         [Route("{id}")]
         public async Task<IActionResult> Delete([FromRoute] Guid id)
         {
-            var user = _userManager.Users.FirstOrDefault(p => p.Id.Equals(id.ToString()));
+            var user = _userManager.Users.FirstOrDefault(u => u.Id.Equals(id.ToString()) && u.Removed == false);
             if (user == null)
                 return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"user not found"}});
 
