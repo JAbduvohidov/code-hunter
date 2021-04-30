@@ -32,10 +32,13 @@ namespace code_hunter.Controllers
         public async Task<IActionResult> Get([FromQuery] string questionTitle)
         {
             questionTitle = questionTitle == null ? string.Empty : questionTitle.Trim();
-            
+
             var questions = await _context.Questions.Where(q =>
                     q.Removed == false && (questionTitle.Equals(string.Empty) || q.Title.Contains(questionTitle)))
                 .ToListAsync();
+            questions.ForEach(async q =>
+                q.AnswersCount = await _context.Answers.CountAsync(a => a.QuestionId.Equals(q.Id)));
+            
             return Ok(questions);
         }
 
