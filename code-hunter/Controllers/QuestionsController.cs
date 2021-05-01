@@ -29,12 +29,15 @@ namespace code_hunter.Controllers
 
         [HttpGet]
         [Route("")]
-        public async Task<IActionResult> Get([FromQuery] string questionTitle)
+        public async Task<IActionResult> Get([FromQuery] string questionTitle, [FromQuery] int limit,
+            [FromQuery] int offset)
         {
             questionTitle = questionTitle == null ? string.Empty : questionTitle.Trim();
 
             var questions = await _context.Questions.Where(q =>
-                    q.Removed == false && (questionTitle.Equals(string.Empty) || q.Title.Contains(questionTitle)))
+                    q.Removed == false &&
+                    (questionTitle.Equals(string.Empty) || q.Title.ToLower().Contains(questionTitle)))
+                .OrderByDescending(q => q.CreatedAt).Skip(offset).Take(limit)
                 .ToListAsync();
             questions.ForEach(q =>
             {
@@ -44,7 +47,12 @@ namespace code_hunter.Controllers
                 q.NotUseful = _context.UsefulQuestions.Count(u => u.QuestionId.Equals(q.Id) && !u.IsUseful);
             });
 
-            return Ok(questions);
+            var count = await _context.Questions.Where(q =>
+                    q.Removed == false && (questionTitle.Equals(string.Empty) || q.Title.Contains(questionTitle)))
+                .OrderByDescending(q => q.CreatedAt)
+                .CountAsync();
+
+            return Ok(new {questions, count});
         }
 
         [HttpGet]
@@ -55,6 +63,11 @@ namespace code_hunter.Controllers
                 .FirstOrDefaultAsync();
             if (question == null)
                 return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"question not found"}});
+
+            question.Useful =
+                await _context.UsefulQuestions.CountAsync(u => u.QuestionId.Equals(question.Id) && u.IsUseful);
+            question.NotUseful =
+                await _context.UsefulQuestions.CountAsync(u => u.QuestionId.Equals(question.Id) && !u.IsUseful);
 
             var answers = await _context.Answers.Where(a => a.QuestionId.Equals(question.Id) && a.Removed == false)
                 .ToListAsync();

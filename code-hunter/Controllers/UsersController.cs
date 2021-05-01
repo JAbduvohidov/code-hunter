@@ -59,10 +59,14 @@ namespace code_hunter.Controllers
                         CreatedAt = user.CreatedAt, UpdatedAt = user.UpdatedAt
                     }).ToListAsync();
 
+            var count = await _userManager.Users.Where(user =>
+                    (email.Equals(string.Empty) || user.Email.Contains(email)) && user.Removed == false)
+                .OrderByDescending(user => user.CreatedAt).CountAsync();
+
             users.ForEach(user =>
                 user.Role = _userManager.GetRolesAsync(new User {Id = user.Id}).Result.First());
 
-            return Ok(users);
+            return Ok(new {users, count});
         }
 
         [HttpPut]
