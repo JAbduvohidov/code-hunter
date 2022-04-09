@@ -35,6 +35,18 @@ namespace code_hunter.Context
                 await roleManager.CreateAsync(adminRole);
             }
 
+            //create role Organization if not exists
+            if (!roleManager.Roles.Any(p => p.Name.Equals("Organization")))
+            {
+                var organizationRole = new IdentityRole
+                {
+                    Name = "Organization",
+                    NormalizedName = "ORGANIZATION"
+                };
+
+                await roleManager.CreateAsync(organizationRole);
+            }
+
             if (!userManager.Users.Any(p => p.Email.Equals("admin@codehunter.com")))
             {
                 var adminUser = new User

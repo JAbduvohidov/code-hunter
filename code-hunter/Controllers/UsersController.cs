@@ -48,14 +48,40 @@ namespace code_hunter.Controllers
         }
 
         [HttpGet]
-        [Route("")]
-        public async Task<IActionResult> Get([FromQuery] string email, [FromQuery] int limit, [FromQuery] int offset)
+        [Route("organizations")]
+        public async Task<IActionResult> GetOrganizations([FromQuery] string email, [FromQuery] int limit,
+            [FromQuery] int offset)
         {
             email = email == null ? string.Empty : email.Trim();
 
             var users = await _userManager.Users.Where(user =>
                     (email.Equals(string.Empty) || user.Email.Contains(email)) && user.Removed == false)
-                .OrderByDescending(user => user.CreatedAt).Skip(offset).Take(limit)
+                .OrderByDescending(user => user.CreatedAt)
+                .Select(user =>
+                    new UserDto
+                    {
+                        Id = user.Id, Email = user.Email, Removed = user.Removed, Username = user.UserName,
+                        CreatedAt = user.CreatedAt, UpdatedAt = user.UpdatedAt
+                    }).ToListAsync();
+
+            users.ForEach(user =>
+                user.Role = _userManager.GetRolesAsync(new User {Id = user.Id}).Result.First());
+
+            var organizations = users.Where(u => u.Role.Equals("Organization")).ToList();
+
+            return Ok(new
+                {organizations = organizations.Skip(offset).Take(limit).ToList(), count = organizations.Count});
+        }
+
+        [HttpGet]
+        [Route("")]
+        public async Task<IActionResult> Get([FromQuery] string email, [FromQuery] int limit, [FromQuery] int offset)
+        {
+            email = email == null ? string.Empty : email.Trim();
+
+            var u = await _userManager.Users.Where(user =>
+                    (email.Equals(string.Empty) || user.Email.Contains(email)) && user.Removed == false)
+                .OrderByDescending(user => user.CreatedAt)
                 .Select(user =>
                     new UserDto
                     {
@@ -67,14 +93,16 @@ namespace code_hunter.Controllers
                     (email.Equals(string.Empty) || user.Email.Contains(email)) && user.Removed == false)
                 .OrderByDescending(user => user.CreatedAt).CountAsync();
 
-            users.ForEach(user =>
+            u.ForEach(user =>
                 user.Role = _userManager.GetRolesAsync(new User {Id = user.Id}).Result.First());
+
+            var users = u.Where(uu => !uu.Role.Equals("Organization")).Skip(offset).Take(limit);
 
             return Ok(new {users, count});
         }
 
         [HttpPut]
-        [Route("{id}")]
+        [Route("{id:guid}")]
         public async Task<IActionResult> Edit([FromRoute] Guid id, [FromBody] UserDto userModel)
         {
             if (!ModelState.IsValid)
@@ -82,7 +110,7 @@ namespace code_hunter.Controllers
 
             var userId = HttpContext.User.Claims.First(c => c.Type.Equals("uid")).Value;
             var role = (await _userManager.GetRolesAsync(new User {Id = userId})).First();
-            if (!role.Equals("Admin") || !userId.Equals(id.ToString()))
+            if (!role.Equals("Admin") && !userId.Equals(id.ToString()))
                 return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"can't edit this user"}});
 
             var user = _userManager.Users.FirstOrDefault(u => u.Id.Equals(id.ToString()) && u.Removed == false);
@@ -104,12 +132,12 @@ namespace code_hunter.Controllers
         }
 
         [HttpDelete]
-        [Route("{id}")]
+        [Route("{id:guid}")]
         public async Task<IActionResult> Delete([FromRoute] Guid id)
         {
             var userId = HttpContext.User.Claims.First(c => c.Type.Equals("uid")).Value;
             var role = (await _userManager.GetRolesAsync(new User {Id = userId})).First();
-            if (!role.Equals("Admin") || userId.Equals(id.ToString()))
+            if (!role.Equals("Admin") && userId.Equals(id.ToString()))
                 return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"can't edit this user"}});
 
             var user = _userManager.Users.FirstOrDefault(u => u.Id.Equals(id.ToString()) && u.Removed == false);
