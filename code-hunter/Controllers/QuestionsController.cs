@@ -29,14 +29,20 @@ namespace code_hunter.Controllers
 
         [HttpGet]
         [Route("")]
-        public async Task<IActionResult> Get([FromQuery] string questionTitle, [FromQuery] int limit,
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        [AllowAnonymous]
+        public async Task<IActionResult> Get([FromQuery] string questionTitle, [FromQuery] bool all,
+            [FromQuery] int limit,
             [FromQuery] int offset)
         {
             questionTitle = questionTitle == null ? string.Empty : questionTitle.Trim();
+            var ok = Guid.TryParse(HttpContext.User.Claims.FirstOrDefault(c => c.Type.Equals("uid"))?.Value,
+                out var userId);
 
             var questions = await _context.Questions.Where(q =>
                     q.Removed == false &&
-                    (questionTitle.Equals(string.Empty) || q.Title.ToLower().Contains(questionTitle)))
+                    (questionTitle.Equals(string.Empty) || q.Title.ToLower().Contains(questionTitle)) &&
+                    (all || !ok || q.UserId.Equals(userId)))
                 .OrderByDescending(q => q.CreatedAt).Skip(offset).Take(limit)
                 .ToListAsync();
             questions.ForEach(q =>
@@ -48,7 +54,9 @@ namespace code_hunter.Controllers
             });
 
             var count = await _context.Questions.Where(q =>
-                    q.Removed == false && (questionTitle.Equals(string.Empty) || q.Title.Contains(questionTitle)))
+                    q.Removed == false &&
+                    (questionTitle.Equals(string.Empty) || q.Title.ToLower().Contains(questionTitle)) &&
+                    (all || !ok || q.UserId.Equals(userId)))
                 .OrderByDescending(q => q.CreatedAt)
                 .CountAsync();
 
@@ -56,7 +64,7 @@ namespace code_hunter.Controllers
         }
 
         [HttpGet]
-        [Route("{id}")]
+        [Route("{id:guid}")]
         public async Task<IActionResult> GetById([FromRoute] Guid id)
         {
             var question = await _context.Questions.Where(q => q.Id.Equals(id) && q.Removed == false)
