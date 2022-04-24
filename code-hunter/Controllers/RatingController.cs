@@ -25,9 +25,9 @@ namespace code_hunter.Controllers
 
         [HttpGet]
         [Route("rating")]
-        public IActionResult Rating()
+        public async Task<IActionResult> Rating()
         {
-            var questions = _context.Questions.FromSqlRaw(@"select q.""Id"",
+            var questions = await _context.Questions.FromSqlRaw(@"select q.""Id"",
             ""Votes"",
             ""AnswersCount"",
             ""Solved"",
@@ -45,9 +45,9 @@ namespace code_hunter.Controllers
             where u.""IsUseful""
             group by q.""Id""
             ORDER BY ""Useful"" desc
-                limit 100;").ToList();
+                limit 100;").ToListAsync();
 
-            var answers = _context.Answers.FromSqlRaw(@"select a.""Id"",
+            var answers = await _context.Answers.FromSqlRaw(@"select a.""Id"",
             ""Title"",
             ""Description"",
             ""Removed"",
@@ -63,8 +63,66 @@ namespace code_hunter.Controllers
             where u.""IsUseful""
             group by a.""Id""
             ORDER BY ""Useful"" desc
-                limit 100;").ToList();
-            return Ok(new {questions, answers});
+                limit 100;").ToListAsync();
+
+            var usefulQUsers = await _context.Users.FromSqlRaw(@"select u.""Id"",
+               u.""Email"",
+               u.""Roles"",
+               u.""CreatedAt"",
+               u.""UpdatedAt"",
+               u.""Removed"",
+               u.""UserName"",
+               u.""NormalizedUserName"",
+               u.""NormalizedEmail"",
+               u.""EmailConfirmed"",
+               u.""PasswordHash"",
+               u.""SecurityStamp"",
+               u.""ConcurrencyStamp"",
+               u.""PhoneNumber"",
+               u.""PhoneNumberConfirmed"",
+               u.""TwoFactorEnabled"",
+               u.""LockoutEnd"",
+               u.""LockoutEnabled"",
+               u.""AccessFailedCount"",
+               coalesce(count(uq.""IsUseful""), 0) as ""UsefulQuestionsCount"",
+               0 as ""UsefulAnswersCount""
+            from ""AspNetUsers"" u
+                     left join ""Questions"" q on u.""Id""::uuid = q.""UserId""
+                     left join ""UsefulQuestions"" uq on uq.""QuestionId"" = q.""Id""
+            where uq.""IsUseful""
+            group by u.""Id""
+            order by ""UsefulQuestionsCount"" desc
+                limit 100;").ToListAsync();
+
+            var usefulAUsers = await _context.Users.FromSqlRaw(@"select u.""Id"",
+               u.""Email"",
+               u.""Roles"",
+               u.""CreatedAt"",
+               u.""UpdatedAt"",
+               u.""Removed"",
+               u.""UserName"",
+               u.""NormalizedUserName"",
+               u.""NormalizedEmail"",
+               u.""EmailConfirmed"",
+               u.""PasswordHash"",
+               u.""SecurityStamp"",
+               u.""ConcurrencyStamp"",
+               u.""PhoneNumber"",
+               u.""PhoneNumberConfirmed"",
+               u.""TwoFactorEnabled"",
+               u.""LockoutEnd"",
+               u.""LockoutEnabled"",
+               u.""AccessFailedCount"",
+               0 as ""UsefulQuestionsCount"",
+               coalesce(count(ua.""IsUseful""), 0) as ""UsefulAnswersCount""
+            from ""AspNetUsers"" u
+                     left join ""Answers"" a on u.""Id""::uuid = a.""UserId""
+                     left join ""UsefulAnswers"" ua on ua.""AnswerId"" = a.""Id""
+            where ua.""IsUseful""
+            group by u.""Id""
+            order by ""UsefulAnswersCount"" desc
+                limit 100;").ToListAsync();
+            return Ok(new {questions, answers, usefulQUsers, usefulAUsers});
         }
     }
 }

@@ -17,5 +17,8 @@ namespace code_hunter.Models.Account
         public DateTime CreatedAt { get; set; }
 
         public DateTime UpdatedAt { get; set; }
+
+        public int UsefulQuestionsCount { get; set; }
+        public int UsefulAnswersCount { get; set; }
     }
 }

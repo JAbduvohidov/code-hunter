@@ -6,17 +6,15 @@ using code_hunter.Context;
 using code_hunter.Models;
 using code_hunter.Models.Account;
 using code_hunter.Models.Answer;
-using code_hunter.Models.Question;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace code_hunter.Controllers
 {
-    [Route("api/questions/{questionId}/answers")]
+    [Route("api/questions/{questionId:guid}/answers")]
     [ApiController]
     public class AnswersController : ControllerBase
     {
@@ -43,7 +41,8 @@ namespace code_hunter.Controllers
                 return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"question not found"}});
 
             var userId = HttpContext.User.Claims.First(c => c.Type.Equals("uid")).Value;
-            var username = (await _userManager.Users.Where(u => u.Id.Equals(userId)).FirstAsync()).UserName;
+            var username = await _userManager.Users.Where(u => u.Id.Equals(userId)).Select(u => u.UserName)
+                .FirstOrDefaultAsync();
 
             var answer = new Answer
             {
@@ -66,7 +65,7 @@ namespace code_hunter.Controllers
         }
 
         [HttpPut]
-        [Route("{id}")]
+        [Route("{id:guid}")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> Edit([FromRoute] Guid questionId, [FromRoute] Guid id,
             [FromBody] AnswerDto answerModel)
@@ -102,7 +101,7 @@ namespace code_hunter.Controllers
         }
 
         [HttpDelete]
-        [Route("{id}")]
+        [Route("{id:guid}")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> Delete([FromRoute] Guid questionId, [FromRoute] Guid id)
         {

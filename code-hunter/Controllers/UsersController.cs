@@ -30,21 +30,21 @@ namespace code_hunter.Controllers
         public async Task<IActionResult> Profile()
         {
             var userId = HttpContext.User.Claims.First(c => c.Type.Equals("uid")).Value;
-            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id.Equals(userId) && u.Removed == false);
+            var user = await _userManager.Users.Where(u => u.Removed == false).Select(u => new UserDto
+            {
+                Id = u.Id,
+                Email = u.Email,
+                Username = u.UserName,
+                CreatedAt = u.CreatedAt,
+                UpdatedAt = u.UpdatedAt,
+            }).FirstOrDefaultAsync(u => u.Id.Equals(userId));
+
             if (user == null)
                 return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"user not found"}});
 
-            var userDto = new UserDto
-            {
-                Id = user.Id,
-                Email = user.Email,
-                Username = user.UserName,
-                CreatedAt = user.CreatedAt,
-                UpdatedAt = user.UpdatedAt,
-                Role = (await _userManager.GetRolesAsync(user)).First()
-            };
+            user.Role = (await _userManager.GetRolesAsync(new User {Id = user.Id})).First();
 
-            return Ok(userDto);
+            return Ok(user);
         }
 
         [HttpGet]

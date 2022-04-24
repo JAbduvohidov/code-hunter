@@ -98,7 +98,8 @@ namespace code_hunter.Controllers
                 return BadRequest();
 
             var userId = HttpContext.User.Claims.First(c => c.Type.Equals("uid")).Value;
-            var username = (await _userManager.Users.Where(u => u.Id.Equals(userId)).FirstAsync()).UserName;
+            var username = await _userManager.Users.Where(u => u.Id.Equals(userId)).Select(u => u.UserName)
+                .FirstOrDefaultAsync();
 
             var question = new Question
             {
@@ -123,7 +124,7 @@ namespace code_hunter.Controllers
         }
 
         [HttpPut]
-        [Route("{id}")]
+        [Route("{id:guid}")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> Edit([FromRoute] Guid id, [FromBody] QuestionDto questionModel)
         {
