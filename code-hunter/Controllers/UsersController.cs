@@ -96,6 +96,8 @@ namespace code_hunter.Controllers
             u.ForEach(user =>
                 user.Role = _userManager.GetRolesAsync(new User {Id = user.Id}).Result.First());
 
+            count -= u.Count(uu => uu.Role.Equals("Organization"));
+
             var users = u.Where(uu => !uu.Role.Equals("Organization")).Skip(offset).Take(limit);
 
             return Ok(new {users, count});

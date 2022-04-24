@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using code_hunter.Context;
+using code_hunter.Models.Account;
 using code_hunter.Models.Question;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
@@ -46,6 +47,10 @@ namespace code_hunter.Controllers
             group by q.""Id""
             ORDER BY ""Useful"" desc
                 limit 100;").ToListAsync();
+            questions.ForEach(q =>
+            {
+                if (q.Title.Length > 60) q.Title = q.Title[..60] + "...";
+            });
 
             var answers = await _context.Answers.FromSqlRaw(@"select a.""Id"",
             ""Title"",
@@ -64,6 +69,10 @@ namespace code_hunter.Controllers
             group by a.""Id""
             ORDER BY ""Useful"" desc
                 limit 100;").ToListAsync();
+            answers.ForEach(a =>
+            {
+                if (a.Description.Length > 120) a.Description = a.Description[..120] + "...";
+            });
 
             var usefulQUsers = await _context.Users.FromSqlRaw(@"select u.""Id"",
                u.""Email"",
@@ -92,7 +101,7 @@ namespace code_hunter.Controllers
             where uq.""IsUseful""
             group by u.""Id""
             order by ""UsefulQuestionsCount"" desc
-                limit 100;").ToListAsync();
+                limit 100;").AsNoTracking().ToListAsync();
 
             var usefulAUsers = await _context.Users.FromSqlRaw(@"select u.""Id"",
                u.""Email"",
@@ -121,7 +130,7 @@ namespace code_hunter.Controllers
             where ua.""IsUseful""
             group by u.""Id""
             order by ""UsefulAnswersCount"" desc
-                limit 100;").ToListAsync();
+                limit 100;").AsNoTracking().ToListAsync();
             return Ok(new {questions, answers, usefulQUsers, usefulAUsers});
         }
     }

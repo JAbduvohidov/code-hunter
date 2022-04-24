@@ -47,6 +47,9 @@ namespace code_hunter.Controllers
                 .ToListAsync();
             questions.ForEach(q =>
             {
+                if (q.Description.Length > 120)
+                    q.Description = q.Description[..120] + "...";
+
                 q.AnswersCount = _context.Answers.Count(a => a.QuestionId.Equals(q.Id) && a.Removed == false);
                 q.Votes = _context.Votes.Count(a => a.QuestionId.Equals(q.Id));
                 q.Useful = _context.UsefulQuestions.Count(u => u.QuestionId.Equals(q.Id) && u.IsUseful);
@@ -153,7 +156,7 @@ namespace code_hunter.Controllers
         }
 
         [HttpDelete]
-        [Route("{id}")]
+        [Route("{id:guid}")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> Delete([FromRoute] Guid id)
         {
@@ -165,7 +168,7 @@ namespace code_hunter.Controllers
             var userId = HttpContext.User.Claims.First(c => c.Type.Equals("uid")).Value;
 
             var role = (await _userManager.GetRolesAsync(new User {Id = userId})).First();
-            if (!question.UserId.Equals(new Guid(userId)) || !role.Equals("Admin"))
+            if (!question.UserId.Equals(new Guid(userId)) && !role.Equals("Admin"))
                 return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"can't delete this question"}});
 
             question.Removed = true;
@@ -177,7 +180,7 @@ namespace code_hunter.Controllers
 
 
         [HttpPut]
-        [Route("{id}/solved")]
+        [Route("{id:guid}/solved")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> ToggleSolved([FromRoute] Guid id)
         {
@@ -189,7 +192,7 @@ namespace code_hunter.Controllers
             var userId = HttpContext.User.Claims.First(c => c.Type.Equals("uid")).Value;
 
             var role = (await _userManager.GetRolesAsync(new User {Id = userId})).First();
-            if (!question.UserId.Equals(new Guid(userId)) || !role.Equals("Admin"))
+            if (!question.UserId.Equals(new Guid(userId)) && !role.Equals("Admin"))
                 return BadRequest(new ErrorsModel<string> {Errors = new List<string> {"can't delete this question"}});
 
             question.Solved = !question.Solved;
